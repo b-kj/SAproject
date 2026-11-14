@@ -10,6 +10,8 @@ public class GameManager : MonoBehaviour
     [SerializeField] public int CurrentHP = 6;
     [SerializeField] public float CurrentMP = 0;
     [SerializeField] public float regenInterval = 5f;
+    [SerializeField] public float jumpGaze = 3;
+    [SerializeField] public float currnetjumpGaze = 0;
 
     [Header("Heart Sprites")]
     public Sprite Heart;
@@ -17,12 +19,25 @@ public class GameManager : MonoBehaviour
 
     public Image[] Health;
     public Slider Mama;
+    public Slider Jump;
 
     private void Awake()
     {
-        Instance = this;
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else if (Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         HP = 6;
         MP = 10;
+        currnetjumpGaze = jumpGaze;
+
+        DontDestroyOnLoad(gameObject);
     }
     private void Start()
     {
@@ -34,6 +49,7 @@ public class GameManager : MonoBehaviour
     private void Update()
     {
         Mama.value = CurrentMP;
+        Jump.value = currnetjumpGaze;
     }
     private System.Collections.IEnumerator AutoRegenMP()
     {
@@ -58,5 +74,15 @@ public class GameManager : MonoBehaviour
     {
         HP++;
         Health[HP].sprite = Heart;
+    }
+    public void UseJumpGaze(float amount)
+    {
+        currnetjumpGaze -= amount;
+        currnetjumpGaze = Mathf.Max(0, currnetjumpGaze);
+    }
+
+    public void ResetJumpGaze()
+    {
+        currnetjumpGaze = jumpGaze;
     }
 }

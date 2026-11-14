@@ -1,23 +1,27 @@
-using System;
 using UnityEngine;
 
 public class CameraController : MonoBehaviour
 {
     [SerializeField] private Transform player;
-    [SerializeField] private float followRate = 10.0f;
-    [SerializeField] private float floorLevel = 0.0f;
-    [SerializeField] private float cameraOffsetY = 3.0f;
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
+    [SerializeField] private float followRate = 10f;
 
-    // Update is called once per frame
-    void Update()
+    [Header("Camera Limit")]
+    [SerializeField] private float minX = -10f;
+    [SerializeField] private float maxX = 10f;
+    [SerializeField] private float minY = 0f;
+    [SerializeField] private float maxY = 20f;
+
+    [Header("Camera Offset")]
+    [SerializeField] private float cameraOffsetY = 3f;
+
+    void LateUpdate()
     {
-        float playerY = Mathf.Max(player.position.y + cameraOffsetY, floorLevel);
-        Vector3 delta = new Vector3(player.position.x - transform.position.x, playerY - transform.position.y, 0);
-        transform.position += delta * followRate * Time.deltaTime;
+        if (player == null) return;
+
+        float targetX = Mathf.Clamp(player.position.x, minX, maxX);
+        float targetY = Mathf.Clamp(player.position.y + cameraOffsetY, minY, maxY);
+
+        Vector3 targetPosition = new Vector3(targetX, targetY, transform.position.z);
+        transform.position = Vector3.Lerp(transform.position, targetPosition, followRate * Time.deltaTime);
     }
 }

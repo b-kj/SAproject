@@ -17,6 +17,7 @@ public class PlayerCombat : MonoBehaviour
     [SerializeField] private float SkillCool1 = 8f;
     [SerializeField] private float SkillTimer1 = 0f;
     [SerializeField] private float tickInterval = 1f;
+    [SerializeField] private float cost1 = 3;
     [SerializeField] private float Damage1 = 30;
     [SerializeField] private int AttackCount = 3;
     private bool isUsingSkill1 = false;
@@ -34,6 +35,7 @@ public class PlayerCombat : MonoBehaviour
     [SerializeField] private TargetController targetController;
     private Animator anim;
     private SpriteRenderer spriteRenderer;
+    private GameManager gm;
 
     private void Awake()
     {
@@ -41,6 +43,11 @@ public class PlayerCombat : MonoBehaviour
         playerController = GetComponent<PlayerController>();
         anim = GetComponent<Animator>();
         spriteRenderer = GetComponent<SpriteRenderer>();
+    }
+    private void Start()
+    {
+        gm = GameManager.Instance;
+
     }
 
     void Update()
@@ -52,9 +59,9 @@ public class PlayerCombat : MonoBehaviour
             Attack();
             attackTimer = attackTime;
         }
-        if (Input.GetButtonDown("Skill1") && SkillTimer1 <= 0 && enterSlowMotion) //스킬1
+        if (Input.GetButtonDown("Skill1") && SkillTimer1 <= 0 && enterSlowMotion && gm.CurrentMP >= cost1) //스킬1
         {
-            skillThreeAttack();
+            UsingSkill1();
             UsingSkill = true;
         }
         if (!Input.GetButton("Slow Motion")) UsingSkill = false;
@@ -109,31 +116,31 @@ public class PlayerCombat : MonoBehaviour
         DrawBox2D((Vector2)transform.position + direction * attackDistance, new Vector2(attackDistance, 1f), 0f, Color.yellow, 1f);
         if (hit.collider != null)
         {
-            EnemyController enemyController = hit.collider.GetComponent<EnemyController>();
-            if (enemyController != null)
+            EnemyController enemy = hit.collider.GetComponentInParent<EnemyController>();
+            if (enemy != null)
             {
                 if (hit.collider.CompareTag("Enemy")) targetController.lastAttackTarget = hit.collider.gameObject;
-                enemyController.Hit(direction);
+                enemy.Hit(direction);
             }
         }
     }
 
-    void skillThreeAttack()
+    void UsingSkill1()
     {
         if (isUsingSkill1) return;
 
         GameObject targetObject = targetController.CurrentTarget;
-        Debug.Log("타겟 이름: " + targetObject.name);
-        Debug.Log("타겟 태그: " + targetObject.tag);
-        if (targetObject == null || targetObject.tag != "Enemy") return;
+        if (targetObject == null)  return; 
 
-        StartCoroutine(SkillCoroutine1(targetObject));
+        if(targetObject.tag == "Enemy")  StartCoroutine(skillThreeAttack(targetObject));
+        else if (targetObject.tag == "Fabric") skillspin(targetObject);
     }
 
-    private IEnumerator SkillCoroutine1(GameObject targetObject)
+    private IEnumerator skillThreeAttack(GameObject targetObject)
     {
         isUsingSkill1 = true;
         SkillTimer1 = SkillCool1;
+        gm.CurrentMP -= cost1;
         yield return new WaitForSeconds(0.1f);
 
         for (int i = 0; i < AttackCount; i++)
@@ -151,6 +158,18 @@ public class PlayerCombat : MonoBehaviour
             if (i < AttackCount - 1)
                 yield return new WaitForSeconds(tickInterval);
         }
+
+        isUsingSkill1 = false;
+    }
+
+    private void skillspin(GameObject targetObject)
+    {
+        isUsingSkill1 = true;
+        SkillTimer1 = SkillCool1;
+        gm.CurrentMP -= cost1;
+
+        FabricController fabric = targetObject.GetComponent<FabricController>();
+        fabric.spin();
 
         isUsingSkill1 = false;
     }

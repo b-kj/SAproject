@@ -1,3 +1,4 @@
+using Unity.VisualScripting;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D))]
@@ -14,8 +15,6 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float lowJumpGravityMultiplier = 2f;
     [SerializeField] private float coyoteTime = 0.12f;
     [SerializeField] private float jumpBufferTime = 0.12f;
-    [SerializeField] private float jumpGaze = 3;
-    [SerializeField] private float currnetjumpGaze = 0;
 
     [Header("Ground Check")]
     [SerializeField] private Transform groundCheck;
@@ -40,6 +39,7 @@ public class PlayerController : MonoBehaviour
     private PlayerCombat playerCombat;
     private Animator anim;
     private SpriteRenderer spriteRenderer;
+    private GameManager gm;
 
     private bool isTouchingWall;
     private float wallDirection;
@@ -55,8 +55,13 @@ public class PlayerController : MonoBehaviour
         anim = GetComponent<Animator>();
         spriteRenderer = GetComponent<SpriteRenderer>();
 
-        currnetjumpGaze = jumpGaze;
         originalGravityScale = rb.gravityScale;
+    }
+
+    private void Start()
+    {
+        gm = GameManager.Instance;
+
     }
 
     private void Update()
@@ -94,9 +99,13 @@ public class PlayerController : MonoBehaviour
         {
             coyoteTimeCounter = coyoteTime;
             anim.SetBool("isJump", false);
-            currnetjumpGaze = jumpGaze;
-            isWallClinging = false;
 
+            if (gm != null)
+            {
+                gm.ResetJumpGaze();
+            }
+
+            isWallClinging = false;
         }
         else
         {
@@ -137,9 +146,9 @@ public class PlayerController : MonoBehaviour
             return;
 
         // 벽에 붙어 있거나 벽 캐스트가 감지 중이면 벽 점프
-        if (wasPressingWall && coyoteTimeCounter > 0 && currnetjumpGaze >= wallJumpCost)
+        if (wasPressingWall && coyoteTimeCounter > 0 && gm.currnetjumpGaze >= wallJumpCost)
         {
-            currnetjumpGaze -= wallJumpCost;
+            gm.currnetjumpGaze -= wallJumpCost;
 
             rb.gravityScale = originalGravityScale;
             rb.linearVelocity = Vector2.zero;
@@ -207,7 +216,14 @@ public class PlayerController : MonoBehaviour
             return false;
         }
 
-        return Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer) != null;
+        Collider2D[] hits = Physics2D.OverlapCircleAll(groundCheck.position, groundCheckRadius);
+
+        foreach (Collider2D hit in hits)
+        {
+            if (hit.gameObject.layer == LayerMask.NameToLayer("Ground") || hit.CompareTag("Fabric")) return true;
+        }
+
+        return false;
     }
 
     private void CheckIsTouchingWall()
@@ -235,7 +251,7 @@ public class PlayerController : MonoBehaviour
     {
         bool pressingWallDirection = horizontalInput * direction > 0;
 
-        if (isTouchingWall && pressingWallDirection && currnetjumpGaze > 0)
+        if (isTouchingWall && pressingWallDirection && gm.currnetjumpGaze > 0)
         {
             coyoteTimeCounter = coyoteTime;
             wasPressingWall = true;
@@ -249,17 +265,17 @@ public class PlayerController : MonoBehaviour
             wasPressingWall = false;
         }
 
-        isWallClinging = wasPressingWall && coyoteTimeCounter > 0 && currnetjumpGaze > 0;
+        isWallClinging = wasPressingWall && coyoteTimeCounter > 0 && gm.currnetjumpGaze > 0;
 
         if (isWallClinging)
         {
-            currnetjumpGaze -= wallClingDrain * Time.fixedDeltaTime;
-            currnetjumpGaze = Mathf.Max(0, currnetjumpGaze);
+            gm.currnetjumpGaze -= wallClingDrain * Time.fixedDeltaTime;
+            gm.currnetjumpGaze = Mathf.Max(0, gm.currnetjumpGaze);
 
             rb.gravityScale = 0f;
             rb.linearVelocity = Vector2.zero;
 
-            if (currnetjumpGaze <= 0)
+            if (gm.currnetjumpGaze <= 0)
             {
                 isWallClinging = false;
                 wasPressingWall = false;
